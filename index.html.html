@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Chemistry Lab</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .lab-area {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .chemicals {
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 35%;
+        }
+        .mixing-area {
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 60%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .beaker {
+            position: relative;
+            width: 160px;
+            height: 200px;
+            border: 4px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 20px 20px;
+            margin-top: 50px;
+            overflow: hidden;
+            background-color: rgba(255, 255, 255, 0.7);
+        }
+        .liquid {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 0;
+            transition: all 0.8s ease;
+        }
+        .chemical-item {
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .chemical-item:hover {
+            transform: scale(1.05);
+        }
+        .reaction-display {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f4f8;
+            border-radius: 10px;
+            width: 100%;
+            min-height: 100px;
+            text-align: center;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 15px;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: #3498db;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .reset {
+            background-color: #e74c3c;
+        }
+        .reset:hover {
+            background-color: #c0392b;
+        }
+        .bubbles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        .bubble {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            animation: rise 4s infinite ease-in;
+        }
+        .chemical-info {
+            margin-top: 10px;
+            font-style: italic;
+            color: #666;
+        }
+        
+        @keyframes rise {
+            0% {
+                transform: translateY(0) scale(0.5);
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) scale(1);
+                opacity: 0;
+            }
+        }
+        .flash {
+            animation: flash-animation 1s;
+        }
+        @keyframes flash-animation {
+            0% { background-color: rgba(255, 255, 255, 0.7); }
+            50% { background-color: rgba(255, 255, 255, 0.95); }
+            100% { background-color: rgba(255, 255, 255, 0.7); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Virtual Chemistry Lab</h1>
+        
+        <div class="lab-area">
+            <div class="chemicals">
+                <h3>Available Chemicals</h3>
+                <div class="chemical-item" style="background-color: #3498db" data-chemical="water" data-color="#3498db">
+                    Water (H₂O)
+                </div>
+                <div class="chemical-item" style="background-color: #e74c3c" data-chemical="acid" data-color="#e74c3c">
+                    Hydrochloric Acid (HCl)
+                </div>
+                <div class="chemical-item" style="background-color: #2ecc71" data-chemical="base" data-color="#2ecc71">
+                    Sodium Hydroxide (NaOH)
+                </div>
+                <div class="chemical-item" style="background-color: #f1c40f" data-chemical="indicator" data-color="#f1c40f">
+                    Phenolphthalein Indicator
+                </div>
+                <div class="chemical-item" style="background-color: #9b59b6" data-chemical="salt" data-color="#9b59b6">
+                    Sodium Carbonate (Na₂CO₃)
+                </div>
+                <div class="chemical-info">Click on a chemical to add it to the beaker</div>
+            </div>
+            
+            <div class="mixing-area">
+                <h3>Mixing Beaker</h3>
+                <div class="beaker">
+                    <div class="liquid" id="beaker-liquid"></div>
+                    <div class="bubbles" id="bubbles"></div>
+                </div>
+                <div class="controls">
+                    <button id="mix-btn">Mix Chemicals</button>
+                    <button class="reset" id="reset-btn">Reset</button>
+                </div>
+                <div class="reaction-display" id="reaction-display">
+                    <p>Add chemicals and mix to see reactions!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Chemistry lab interactive logic
+        const chemicals = document.querySelectorAll('.chemical-item');
+        const beaker = document.querySelector('.beaker');
+        const liquid = document.getElementById('beaker-liquid');
+        const mixBtn = document.getElementById('mix-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const reactionDisplay = document.getElementById('reaction-display');
+        const bubblesContainer = document.getElementById('bubbles');
+        
+        let currentMixture = [];
+        let liquidLevel = 0;
+        
+        // Add chemical to beaker when clicked
+        chemicals.forEach(chem => {
+            chem.addEventListener('click', () => {
+                if (currentMixture.length >= 3) {
+                    reactionDisplay.innerHTML = "<p>Beaker is full! Click 'Reset' to start over.</p>";
+                    return;
+                }
+                
+                const chemical = chem.dataset.chemical;
+                const color = chem.dataset.color;
+                
+                addChemical(chemical, color);
+                
+                // Show what was added
+                reactionDisplay.innerHTML = `<p>Added ${chem.innerText} to the beaker</p>`;
+            });
+        });
+        
+        // Add chemical to the beaker
+        function addChemical(chemical, color) {
+            currentMixture.push(chemical);
+            
+            // Calculate new gradient for the mixture
+            updateLiquidColor();
+            
+            // Increase liquid level
+            liquidLevel += 20;
+            liquid.style.height = `${Math.min(liquidLevel, 80)}%`;
+        }
+        
+        // Update the liquid color based on current mixture
+        function updateLiquidColor() {
+            if (currentMixture.length === 0) {
+                liquid.style.background = 'transparent';
+                return;
+            }
+            
+            if (currentMixture.length === 1) {
+                const chemData = getChemicalByName(currentMixture[0]);
+                liquid.style.background = chemData.color;
+            } else {
+                // Create color mix
+                let gradient = 'linear-gradient(to bottom, ';
+                currentMixture.forEach((chem, index) => {
+                    const chemData = getChemicalByName(chem);
+                    gradient += `${chemData.color} ${index * (100/currentMixture.length)}%, `;
+                    gradient += `${chemData.color} ${(index+1) * (100/currentMixture.length)}%`;
+                    if (index < currentMixture.length - 1) gradient += ', ';
+                });
+                gradient += ')';
+                liquid.style.background = gradient;
+            }
+        }
+        
+        // Helper to get chemical data by name
+        function getChemicalByName(name) {
+            for (let chem of chemicals) {
+                if (chem.dataset.chemical === name) {
+                    return {
+                        name: chem.innerText,
+                        color: chem.dataset.color
+                    };
+                }
+            }
+            return null;
+        }
+        
+        // Mix chemicals button
+        mixBtn.addEventListener('click', () => {
+            if (currentMixture.length < 2) {
+                reactionDisplay.innerHTML = "<p>Add at least two chemicals to see a reaction!</p>";
+                return;
+            }
+            
+            // Create a sorted array of chemicals to check reactions
+            const sortedMix = [...currentMixture].sort();
+            const mixKey = sortedMix.join('-');
+            
+            // Animate the mixing
+            beaker.classList.add('flash');
+            setTimeout(() => { beaker.classList.remove('flash'); }, 1000);
+            
+            // Check for specific reactions
+            let reactionOccurred = false;
+            let finalColor = '';
+            let reactionText = '';
+            let showBubbles = false;
+            
+            // Acid-Base reaction
+            if (mixKey.includes('acid-base')) {
+                reactionOccurred = true;
+                reactionText = 'HCl + NaOH → NaCl + H₂O<br>Neutralization reaction occurred! Salt and water formed.';
+                finalColor = '#add8e6'; // Light blue
+                showBubbles = true;
+            }
+            
+            // Acid-Carbonate reaction
+            else if (mixKey.includes('acid-salt')) {
+                reactionOccurred = true;
+                reactionText = 'Na₂CO₃ + 2HCl → 2NaCl + H₂O + CO₂<br>Carbon dioxide gas is produced!';
+                finalColor = '#d3d3d3'; // Light gray
+                showBubbles = true;
+            }
+            
+            // Base-Indicator reaction
+            else if (mixKey.includes('base-indicator')) {
+                reactionOccurred = true;
+                reactionText = 'Phenolphthalein turns pink in basic solution!';
+                finalColor = '#ff69b4'; // Hot pink
+            }
+            
+            // Acid-Indicator reaction
+            else if (mixKey.includes('acid-indicator')) {
+                reactionOccurred = true;
+                reactionText = 'Phenolphthalein remains colorless in acidic solution.';
+                finalColor = '#f8f8ff'; // Almost clear
+            }
+            
+            if (reactionOccurred) {
+                liquid.style.background = finalColor;
+                reactionDisplay.innerHTML = `<p><strong>Reaction:</strong><br>${reactionText}</p>`;
+                
+                if (showBubbles) {
+                    createBubbles();
+                }
+            } else {
+                reactionDisplay.innerHTML = "<p>No significant reaction observed with this combination.</p>";
+            }
+        });
+        
+        // Create bubble effect
+        function createBubbles() {
+            bubblesContainer.style.opacity = '1';
+            bubblesContainer.innerHTML = '';
+            
+            for (let i = 0; i < 20; i++) {
+                const bubble = document.createElement('div');
+                bubble.classList.add('bubble');
+                
+                // Random positioning and timing
+                const size = Math.random() * 10 + 5;
+                bubble.style.width = `${size}px`;
+                bubble.style.height = `${size}px`;
+                bubble.style.left = `${Math.random() * 80 + 10}%`;
+                bubble.style.bottom = `${Math.random() * 20}%`;
+                bubble.style.animationDelay = `${Math.random() * 2}s`;
+                
+                bubblesContainer.appendChild(bubble);
+            }
+            
+            // Hide bubbles after animation
+            setTimeout(() => {
+                bubblesContainer.style.opacity = '0';
+            }, 8000);
+        }
+        
+        // Reset the beaker
+        resetBtn.addEventListener('click', () => {
+            currentMixture = [];
+            liquidLevel = 0;
+            liquid.style.height = '0';
+            liquid.style.background = 'transparent';
+            bubblesContainer.style.opacity = '0';
+            reactionDisplay.innerHTML = "<p>Add chemicals and mix to see reactions!</p>";
+        });
+    </script>
+</body>
+</html>
